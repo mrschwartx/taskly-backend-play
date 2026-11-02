@@ -1,0 +1,21 @@
+GET     /                                   com.taskly.backend.shared.infrastructure.http.RootController.welcome
+GET     /actuator/health                    com.taskly.backend.shared.infrastructure.http.HealthController.health
+
+POST    /api/v1/auth/signup                 com.taskly.backend.users.presentation.AuthController.signUp(request: Request)
+POST    /api/v1/auth/signin                 com.taskly.backend.users.presentation.AuthController.signIn(request: Request)
+GET     /api/v1/auth/signout                com.taskly.backend.users.presentation.AuthController.signOut
+
+GET     /api/v1/users                       com.taskly.backend.users.presentation.UsersController.list(request: Request)
+GET     /api/v1/users/                      com.taskly.backend.users.presentation.UsersController.list(request: Request)
+GET     /api/v1/users/:id                   com.taskly.backend.users.presentation.UsersController.get(id: String)
+PATCH   /api/v1/users/update/:id            com.taskly.backend.users.presentation.UsersController.update(request: Request, id: String)
+POST    /api/v1/users/upload/:id            com.taskly.backend.users.presentation.UsersController.uploadAvatar(request: Request, id: String)
+DELETE  /api/v1/users/delete/:id            com.taskly.backend.users.presentation.UsersController.delete(request: Request, id: String)
+
+POST    /api/v1/tasks/create                com.taskly.backend.tasks.presentation.TasksController.create(request: Request)
+GET     /api/v1/tasks/user/:id              com.taskly.backend.tasks.presentation.TasksController.listByUser(request: Request, id: String)
+GET     /api/v1/tasks/:id                   com.taskly.backend.tasks.presentation.TasksController.get(request: Request, id: String)
+PATCH   /api/v1/tasks/:id                   com.taskly.backend.tasks.presentation.TasksController.update(request: Request, id: String)
+DELETE  /api/v1/tasks/:id                   com.taskly.backend.tasks.presentation.TasksController.delete(request: Request, id: String)
+
+GET     /images/*file                       com.taskly.backend.users.presentation.AvatarFilesController.show(file: String)

@@ -23,7 +23,7 @@ docker/ps:
 	$(COMPOSE) ps
 
 docker/seed:
-	$(COMPOSE) exec taskly-backend java -jar app.jar --spring.main.web-application-type=none --taskly.seed.enabled=true
+	$(COMPOSE) exec taskly-backend bin/taskly-backend -main com.taskly.backend.config.SeedMain -Dlogger.resource=logback-console.xml -Dpidfile.path=/dev/null
 
 docker/clean:
 	$(COMPOSE) down -v --rmi local

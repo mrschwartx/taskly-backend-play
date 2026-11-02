@@ -1,6 +1,6 @@
-MVN = ./mvnw
-JAR = target/taskly-backend.jar
-SEED_ARGS = --spring.main.web-application-type=none --taskly.seed.enabled=true
+SBT = sbt
+SEED_MAIN = com.taskly.backend.config.SeedMain
+STAGE_BIN = target/universal/stage/bin/taskly-backend
 
 .PHONY: env secret-key dev build run test verify seed clean
 
@@ -10,23 +10,22 @@ env:
 secret-key:
 	@openssl rand -base64 32
 
-dev:
-	$(MVN) spring-boot:run
+dev: env
+	@set -a && . ./.env && set +a && $(SBT) run
 
 build:
-	$(MVN) -DskipTests package
+	$(SBT) stage
 
-run: build
-	java -jar $(JAR)
+run: build env
+	@set -a && . ./.env && set +a && $(STAGE_BIN)
 
-test:
-	$(MVN) test
+test: env
+	@set -a && . ./.env && set +a && $(SBT) test
 
-verify:
-	$(MVN) verify
+verify: test
 
-seed: build
-	java -jar $(JAR) $(SEED_ARGS)
+seed: build env
+	@set -a && . ./.env && set +a && $(STAGE_BIN) -main $(SEED_MAIN)
 
 clean:
-	$(MVN) clean
+	$(SBT) clean

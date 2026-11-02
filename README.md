@@ -1,10 +1,10 @@
-# Taskly Backend (Spring Boot)
+# Taskly Backend (Play Framework)
 
-A task manager backend: sign up and sign in, manage your profile and avatar, and create, filter, sort and paginate to-do tasks. It is a REST API built with Spring Boot 4 and PostgreSQL, organised as a modular monolith with Domain-Driven Design and Clean Architecture. It is a Java port of the Express version and keeps the same HTTP contract.
+A task manager backend: sign up and sign in, manage your profile and avatar, and create, filter, sort and paginate to-do tasks. It is a REST API built with Play Framework 3 (Java) and PostgreSQL, organised as a modular monolith with Domain-Driven Design and Clean Architecture. It is a port of the Spring Boot version and keeps the same HTTP contract.
 
 The browser client is a separate Taskly frontend that talks to this API.
 
-**Stack:** Java 25 · Spring Boot 4 · Spring Web MVC · Spring Security · Spring Data JPA · PostgreSQL 18 · Flyway · JWT (Nimbus) · bcrypt · JUnit 5 · Docker · GitHub Actions
+**Stack:** Java 21 · Play Framework 3.0 (Pekko HTTP) · sbt · Guice · Play JDBC (HikariCP) · PostgreSQL 18 · Flyway · JWT (jjwt) · bcrypt (Bouncy Castle) · JUnit 4 · AssertJ · Docker · GitHub Actions
 
 ## Contents
 
@@ -17,12 +17,12 @@ The browser client is a separate Taskly frontend that talks to this API.
 - [Testing](#testing)
 - [CI](#ci)
 - [Limits](#limits)
-- [Migrating from the Express version](#migrating-from-the-express-version)
+- [Migrating from the Spring Boot version](#migrating-from-the-spring-boot-version)
 - [References](#references)
 
 ## Quick start
 
-Requires JDK 25 and Docker.
+Requires JDK 21, [sbt](https://www.scala-sbt.org/download/) and Docker.
 
 ```sh
 cd taskly-docker
@@ -30,20 +30,20 @@ make docker/dev-up
 cd ../taskly-backend
 cp .env.example .env
 openssl rand -base64 32
-./mvnw spring-boot:run
+make dev
 ```
 
-Paste the generated value into `AUTH_SECRET` in `.env`. The API runs at http://localhost:8080 and pgAdmin at http://localhost:8081 (login `admin@taskly.dev` / `admin`, server host `taskly-postgres`, user `dev_user`, password `dev_pass`). Flyway migrations run automatically on startup. Values in `.env` are read from the working directory and can also be provided as regular environment variables.
+Paste the generated value into `AUTH_SECRET` in `.env`. The API runs at http://localhost:8080 and pgAdmin at http://localhost:8081 (login `admin@taskly.dev` / `admin`, server host `taskly-postgres`, user `dev_user`, password `dev_pass`). Flyway migrations run automatically on startup. Play does not read `.env` by itself: the `make` targets load it into the environment, and you can also export the variables yourself before running `sbt`.
 
-| Goal               | Command                                                                       |
-| ------------------ | ----------------------------------------------------------------------------- |
-| Run in development | `./mvnw spring-boot:run`                                                      |
-| Build the jar      | `./mvnw -DskipTests package`                                                  |
-| Run the jar        | `java -jar target/taskly-backend.jar`                                         |
-| Seed demo data     | `java -jar target/taskly-backend.jar --spring.main.web-application-type=none --taskly.seed.enabled=true` |
-| Run with Docker    | `make docker/up` (from `taskly-docker`)                                       |
-| Seed in Docker     | `make docker/seed` (from `taskly-docker`)                                     |
-| Stop Docker        | `make docker/down` (from `taskly-docker`)                                     |
+| Goal               | Command                                                            |
+| ------------------ | ------------------------------------------------------------------ |
+| Run in development | `make dev` (or `sbt run` with the variables exported)              |
+| Build the package  | `sbt stage`                                                        |
+| Run the package    | `make run` (or `target/universal/stage/bin/taskly-backend`)        |
+| Seed demo data     | `make seed` (or `bin/taskly-backend -main com.taskly.backend.config.SeedMain`) |
+| Run with Docker    | `make docker/up` (from `taskly-docker`)                            |
+| Seed in Docker     | `make docker/seed` (from `taskly-docker`)                          |
+| Stop Docker        | `make docker/down` (from `taskly-docker`)                          |
 
 `make docker/up` creates `taskly-docker/.env` with a random database password and `AUTH_SECRET` on the first run, then starts PostgreSQL and the API and waits until both are healthy. `PORT` overrides the host port in the Docker setup. The container always listens on port 8080. Demo login after seeding: `johndoe123@mail.com` / `password123`.
 
@@ -53,13 +53,14 @@ Paste the generated value into `AUTH_SECRET` in `.env`. The API runs at http://l
 - **Users**: list users, update the profile, upload an avatar and delete the account.
 - **Tasks**: create, view, update and delete tasks.
 - **Listing**: filter by status, sort and paginate tasks.
-- **Platform**: versioned Flyway migrations, request logging, graceful shutdown, health checks on `/` and `/actuator/health`.
+- **Platform**: versioned Flyway migrations, request logging, CORS, health checks on `/` and `/actuator/health`.
 
 ## Configuration
 
+Configuration lives in `conf/application.conf` and is overridden by environment variables.
+
 | Variable            | Default                 | Purpose                                              |
 | ------------------- | ----------------------- | ---------------------------------------------------- |
-| `APP_NAME`          | `taskly-api`            | Application name                                     |
 | `APP_HOST`          | `0.0.0.0`               | Bind address                                         |
 | `APP_PORT`          | `8080`                  | Port the API listens on                              |
 | `APP_LEVEL`         | `development`           | Environment level, `production` hardens the cookie   |
@@ -69,13 +70,18 @@ Paste the generated value into `AUTH_SECRET` in `.env`. The API runs at http://l
 | `DATABASE_POOL_MAX` | `10`                    | Maximum connections in the pool                      |
 | `DATABASE_TIMEOUT`  | `30000`                 | Connection timeout in milliseconds                   |
 | `AUTH_SECRET`       | required                | JWT secret, at least 32 characters                   |
+| `APPLICATION_SECRET`| `AUTH_SECRET`           | Play application secret, only needed to use a separate value |
 | `COOKIE_DOMAIN`     | empty                   | Domain of the auth cookie in production              |
 | `BCRYPT_ROUNDS`     | `10`                    | bcrypt cost factor                                   |
 | `CLIENT_URL`        | `http://localhost:3000` | Allowed CORS origin                                  |
 | `LOG_LEVEL`         | `debug`                 | Log level of the `com.taskly` packages               |
-| `LOG_FILE`          | `logs/taskly-api.log`   | Log file, set it empty to log to the console only    |
-| `PUBLIC_DIR`        | `public`                | Directory served as static files, holds the avatars  |
+| `LOG_FILE`          | `logs/taskly-api.log`   | Log file used by `conf/logback.xml`                  |
+| `PUBLIC_DIR`        | `public`                | Directory that holds the avatars                     |
 | `SEED_ALLOW_PRODUCTION` | `false`             | Allows seeding when `APP_LEVEL` is `production`      |
+| `FLYWAY_BASELINE_ON_MIGRATE` | `false`        | Baselines an existing database on the first start    |
+| `FLYWAY_BASELINE_VERSION` | `2`               | Version recorded by the baseline                     |
+
+Logging goes to the console and to `LOG_FILE`. To log to the console only, start the app with `-Dlogger.resource=logback-console.xml`. The Docker image does this already.
 
 Docker only, in `taskly-docker/.env`:
 
@@ -94,15 +100,17 @@ The frontend must set `VITE_API_BASE_URL=http://localhost:8080/api/v1` and `VITE
 
 ```
 taskly-backend/
-  src/main/java/com/taskly/backend/
-    config/        typed properties, security, adapter wiring, seed runner
+  app/com/taskly/backend/
+    config/        typed configuration, Guice module, migrator, authentication action, seeder
     shared/        errors, ids, event bus, HTTP and persistence helpers
     users/         authentication and user management
     tasks/         task management
-  src/main/resources/
-    application.yaml
+  conf/
+    application.conf
+    routes
+    logback.xml
     db/migration/  Flyway migrations
-  src/test/java/   unit and integration suites
+  test/            unit and integration suites
 taskly-docker/
   taskly-backend/Dockerfile
   docker-compose.local.yml
@@ -117,15 +125,31 @@ taskly-docker/
 <module>/
   domain/          entities, value objects, repository and service contracts
   application/     use cases
-  infrastructure/  JPA, JWT, bcrypt and file system adapters
-  presentation/    REST controllers
+  infrastructure/  JDBC, JWT, bcrypt and file system adapters
+  presentation/    Play controllers
 ```
 
 ### Dependency rules
 
 - Dependencies point inward: presentation and infrastructure depend on application, application depends on domain.
 - Modules never import each other. They communicate through the in-process event bus, so deleting a user removes that user's tasks.
-- Authentication is cross-cutting: a servlet filter in `config` verifies the cookie and exposes the user id to controllers as `AuthenticatedUser`.
+- Authentication is cross-cutting: the `@Authenticated` action composition in `config` verifies the cookie and exposes the user id to controllers through a request attribute.
+- Domain exceptions are mapped to the `{ "status", "message" }` JSON shape by `ApiActionCreator` (outermost action) and `ApiErrorHandler` (client errors and unexpected failures).
+
+### Spring to Play mapping
+
+| Spring Boot                          | Play                                                        |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `@RestController`, `@RequestMapping` | `Controller` classes and `conf/routes`                      |
+| Servlet filter `JwtAuthenticationFilter` | `@Authenticated` action composition                     |
+| `GlobalExceptionHandler`             | `ApiActionCreator` and `ApiErrorHandler`                    |
+| `RequestLoggingFilter`               | `RequestLoggingFilter` (Play `Filter`)                      |
+| Spring Security CORS                 | `play.filters.cors.CORSFilter`                              |
+| Spring Data JPA                      | Play JDBC with prepared statements                          |
+| `@ConfigurationProperties`           | `TasklyConfig` over Typesafe Config                         |
+| `@Bean` wiring                       | Guice `AppModule`                                           |
+| `SeedRunner` with `ApplicationRunner`| `SeedMain` entry point                                      |
+| Actuator health                      | `/actuator/health` controller with a database check         |
 
 ## Database
 
@@ -166,15 +190,16 @@ Errors are returned as `{ "status": <code>, "message": "<text>" }`. Unknown rout
 
 ## Testing
 
-| Layer       | Command         | What it proves                                          |
-| ----------- | --------------- | ------------------------------------------------------- |
-| Unit        | `./mvnw test`   | Domain, use cases, JWT, bcrypt and file storage, no I/O |
-| Integration | `./mvnw verify` | Full HTTP flows on a real PostgreSQL (`*IT` classes)    |
+| Layer       | Command                | What it proves                                          |
+| ----------- | ---------------------- | ------------------------------------------------------- |
+| Unit        | `sbt "testOnly *Test"` | Domain, use cases, JWT, bcrypt and file storage, no I/O |
+| Integration | `sbt "testOnly *IT"`   | Full HTTP flows on a real PostgreSQL                    |
+| All         | `make test`            | Both suites                                             |
 
-Integration tests need a PostgreSQL server where the user can create databases. They read `TEST_DATABASE_URL` and default to the development database from `make docker/dev-up`. The suite creates its own temporary database, runs the migrations and drops it when the JVM exits.
+Integration tests start the application with Play's `WithServer` and need a PostgreSQL server where the user can create databases. They read `TEST_DATABASE_URL` and default to the development database from `make docker/dev-up`. The suite creates its own temporary database, runs the migrations and drops it when the JVM exits.
 
 ```sh
-TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres ./mvnw verify
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres sbt test
 ```
 
 ## CI
@@ -182,7 +207,7 @@ TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres ./mvnw ve
 `.github/workflows/ci.yml` runs these jobs:
 
 1. **Commitlint**: commit message linting on pull requests, configured in `.commitlintrc.json`.
-2. **Build**: compiles and packages the application with JDK 25.
+2. **Build**: compiles the application and the tests, and stages the package with JDK 21.
 3. **Tests**: unit and integration suites against a PostgreSQL 18 service.
 4. **Docker**: builds the image, starts the Compose stack, then checks `/`, signs up a user and runs the seed.
 
@@ -192,20 +217,24 @@ TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres ./mvnw ve
 - Uploaded avatars are stored on local disk and served from `/images/users`. The Compose stack keeps them in the `taskly-avatars` volume.
 - Events are delivered in-process, so the app runs as a single instance.
 
-## Migrating from the Express version
+## Migrating from the Spring Boot version
 
-- `DATABASE_URL` is now a JDBC URL and the credentials moved to `DATABASE_USER` and `DATABASE_PASSWORD`.
-- `LOG_TO_FILE` is replaced by `LOG_FILE`. An empty value disables the log file.
-- Existing sessions stay valid: tokens use the same HS256 secret, payload and cookie name, and bcrypt hashes are compatible.
-- An existing PostgreSQL database created by the Express version already contains the tables. Start the app once with `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true` and `SPRING_FLYWAY_BASELINE_VERSION=2` so Flyway records them as applied.
+- The HTTP contract, the database schema, the JWT format, the cookie name and the bcrypt hashes are unchanged, so existing sessions and data stay valid.
+- Environment variables are the same, except `APP_NAME` is gone, `LOG_FILE` no longer accepts an empty value (use `-Dlogger.resource=logback-console.xml`) and `.env` is loaded by `make` instead of the application.
+- Seeding runs through `bin/taskly-backend -main com.taskly.backend.config.SeedMain` instead of a Spring flag.
+- An existing PostgreSQL database that already holds the tables but no `flyway_schema_history` can be adopted by starting the app once with `FLYWAY_BASELINE_ON_MIGRATE=true` and `FLYWAY_BASELINE_VERSION=2`.
+- The runtime is JDK 21 (an LTS release supported by Play 3.0 and sbt) instead of JDK 25.
+- A request body is parsed as JSON whatever its `Content-Type`. A path that exists with the wrong HTTP method answers 404, as Play does not distinguish it from an unknown path.
 
 ## References
 
-- [Spring Boot](https://spring.io/projects/spring-boot)
-- [Spring Security](https://spring.io/projects/spring-security)
-- [Spring Data JPA](https://spring.io/projects/spring-data-jpa)
+- [Play Framework](https://www.playframework.com/documentation/latest/Home)
+- [Play Java Action composition](https://www.playframework.com/documentation/latest/JavaActionsComposition)
+- [Play JDBC](https://www.playframework.com/documentation/latest/AccessingAnSQLDatabase)
+- [Play CORS filter](https://www.playframework.com/documentation/latest/CorsFilter)
 - [Flyway](https://documentation.red-gate.com/flyway)
 - [PostgreSQL](https://www.postgresql.org/docs/18/)
-- [Nimbus JOSE + JWT](https://connect2id.com/products/nimbus-jose-jwt)
-- [JUnit 5](https://junit.org/junit5/)
+- [jjwt](https://github.com/jwtk/jjwt)
+- [Bouncy Castle](https://www.bouncycastle.org/)
+- [JUnit 4](https://junit.org/junit4/)
 - [Docker multi-stage builds](https://docs.docker.com/build/building/multi-stage/)
