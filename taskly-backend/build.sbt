@@ -1,3 +1,5 @@
+val jacksonVersion = "2.19.1"
+
 lazy val root = (project in file("."))
   .enablePlugins(PlayJava)
   .settings(
@@ -20,6 +22,14 @@ lazy val root = (project in file("."))
       "io.jsonwebtoken" % "jjwt-jackson" % "0.12.6" % Runtime,
       "org.assertj" % "assertj-core" % "3.27.7" % Test,
       "com.jayway.jsonpath" % "json-path" % "2.9.0" % Test
+    ),
+    dependencyOverrides ++= Seq(
+      "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
+      "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
+      "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonVersion,
+      "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion,
+      "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion,
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
     ),
     javacOptions ++= Seq("--release", "21", "-encoding", "UTF-8", "-parameters"),
     PlayKeys.externalizeResources := false,
