@@ -17,7 +17,6 @@ The browser client is a separate Taskly frontend that talks to this API.
 - [Testing](#testing)
 - [CI](#ci)
 - [Limits](#limits)
-- [Migrating from the Spring Boot version](#migrating-from-the-spring-boot-version)
 - [References](#references)
 
 ## Quick start
@@ -35,15 +34,15 @@ make dev
 
 Paste the generated value into `AUTH_SECRET` in `.env`. The API runs at http://localhost:8080 and pgAdmin at http://localhost:8081 (login `admin@taskly.dev` / `admin`, server host `taskly-postgres`, user `dev_user`, password `dev_pass`). Flyway migrations run automatically on startup. Play does not read `.env` by itself: the `make` targets load it into the environment, and you can also export the variables yourself before running `sbt`.
 
-| Goal               | Command                                                            |
-| ------------------ | ------------------------------------------------------------------ |
-| Run in development | `make dev` (or `sbt run` with the variables exported)              |
-| Build the package  | `sbt stage`                                                        |
-| Run the package    | `make run` (or `target/universal/stage/bin/taskly-backend`)        |
+| Goal               | Command                                                                        |
+| ------------------ | ------------------------------------------------------------------------------ |
+| Run in development | `make dev` (or `sbt run` with the variables exported)                          |
+| Build the package  | `sbt stage`                                                                    |
+| Run the package    | `make run` (or `target/universal/stage/bin/taskly-backend`)                    |
 | Seed demo data     | `make seed` (or `bin/taskly-backend -main com.taskly.backend.config.SeedMain`) |
-| Run with Docker    | `make docker/up` (from `taskly-docker`)                            |
-| Seed in Docker     | `make docker/seed` (from `taskly-docker`)                          |
-| Stop Docker        | `make docker/down` (from `taskly-docker`)                          |
+| Run with Docker    | `make docker/up` (from `taskly-docker`)                                        |
+| Seed in Docker     | `make docker/seed` (from `taskly-docker`)                                      |
+| Stop Docker        | `make docker/down` (from `taskly-docker`)                                      |
 
 `make docker/up` creates `taskly-docker/.env` with a random database password and `AUTH_SECRET` on the first run, then starts PostgreSQL and the API and waits until both are healthy. `PORT` overrides the host port in the Docker setup. The container always listens on port 8080. Demo login after seeding: `johndoe123@mail.com` / `password123`.
 
@@ -59,37 +58,37 @@ Paste the generated value into `AUTH_SECRET` in `.env`. The API runs at http://l
 
 Configuration lives in `conf/application.conf` and is overridden by environment variables.
 
-| Variable            | Default                 | Purpose                                              |
-| ------------------- | ----------------------- | ---------------------------------------------------- |
-| `APP_HOST`          | `0.0.0.0`               | Bind address                                         |
-| `APP_PORT`          | `8080`                  | Port the API listens on                              |
-| `APP_LEVEL`         | `development`           | Environment level, `production` hardens the cookie   |
-| `DATABASE_URL`      | required                | JDBC URL, for example `jdbc:postgresql://localhost:5432/taskly_dev` |
-| `DATABASE_USER`     | required                | PostgreSQL user                                      |
-| `DATABASE_PASSWORD` | required                | PostgreSQL password                                  |
-| `DATABASE_POOL_MAX` | `10`                    | Maximum connections in the pool                      |
-| `DATABASE_TIMEOUT`  | `30000`                 | Connection timeout in milliseconds                   |
-| `AUTH_SECRET`       | required                | JWT secret, at least 32 characters                   |
-| `APPLICATION_SECRET`| `AUTH_SECRET`           | Play application secret, only needed to use a separate value |
-| `COOKIE_DOMAIN`     | empty                   | Domain of the auth cookie in production              |
-| `BCRYPT_ROUNDS`     | `10`                    | bcrypt cost factor                                   |
-| `CLIENT_URL`        | `http://localhost:3000` | Allowed CORS origin                                  |
-| `LOG_LEVEL`         | `debug`                 | Log level of the `com.taskly` packages               |
-| `LOG_FILE`          | `logs/taskly-api.log`   | Log file used by `conf/logback.xml`                  |
-| `PUBLIC_DIR`        | `public`                | Directory that holds the avatars                     |
-| `SEED_ALLOW_PRODUCTION` | `false`             | Allows seeding when `APP_LEVEL` is `production`      |
-| `FLYWAY_BASELINE_ON_MIGRATE` | `false`        | Baselines an existing database on the first start    |
-| `FLYWAY_BASELINE_VERSION` | `2`               | Version recorded by the baseline                     |
+| Variable                     | Default                 | Purpose                                                             |
+| ---------------------------- | ----------------------- | ------------------------------------------------------------------- |
+| `APP_HOST`                   | `0.0.0.0`               | Bind address                                                        |
+| `APP_PORT`                   | `8080`                  | Port the API listens on                                             |
+| `APP_LEVEL`                  | `development`           | Environment level, `production` hardens the cookie                  |
+| `DATABASE_URL`               | required                | JDBC URL, for example `jdbc:postgresql://localhost:5432/taskly_dev` |
+| `DATABASE_USER`              | required                | PostgreSQL user                                                     |
+| `DATABASE_PASSWORD`          | required                | PostgreSQL password                                                 |
+| `DATABASE_POOL_MAX`          | `10`                    | Maximum connections in the pool                                     |
+| `DATABASE_TIMEOUT`           | `30000`                 | Connection timeout in milliseconds                                  |
+| `AUTH_SECRET`                | required                | JWT secret, at least 32 characters                                  |
+| `APPLICATION_SECRET`         | `AUTH_SECRET`           | Play application secret, only needed to use a separate value        |
+| `COOKIE_DOMAIN`              | empty                   | Domain of the auth cookie in production                             |
+| `BCRYPT_ROUNDS`              | `10`                    | bcrypt cost factor                                                  |
+| `CLIENT_URL`                 | `http://localhost:3000` | Allowed CORS origin                                                 |
+| `LOG_LEVEL`                  | `debug`                 | Log level of the `com.taskly` packages                              |
+| `LOG_FILE`                   | `logs/taskly-api.log`   | Log file used by `conf/logback.xml`                                 |
+| `PUBLIC_DIR`                 | `public`                | Directory that holds the avatars                                    |
+| `SEED_ALLOW_PRODUCTION`      | `false`                 | Allows seeding when `APP_LEVEL` is `production`                     |
+| `FLYWAY_BASELINE_ON_MIGRATE` | `false`                 | Baselines an existing database on the first start                   |
+| `FLYWAY_BASELINE_VERSION`    | `2`                     | Version recorded by the baseline                                    |
 
 Logging goes to the console and to `LOG_FILE`. To log to the console only, start the app with `-Dlogger.resource=logback-console.xml`. The Docker image does this already.
 
 Docker only, in `taskly-docker/.env`:
 
-| Variable      | Default  | Purpose                                 |
-| ------------- | -------- | --------------------------------------- |
-| `PORT`        | `8080`   | Host port used by Docker                |
-| `DB_NAME`     | `taskly` | PostgreSQL database name                |
-| `DB_USER`     | `taskly` | PostgreSQL user                         |
+| Variable      | Default  | Purpose                                |
+| ------------- | -------- | -------------------------------------- |
+| `PORT`        | `8080`   | Host port used by Docker               |
+| `DB_NAME`     | `taskly` | PostgreSQL database name               |
+| `DB_USER`     | `taskly` | PostgreSQL user                        |
 | `DB_PASSWORD` | required | PostgreSQL password, generated by make |
 
 The frontend must set `VITE_API_BASE_URL=http://localhost:8080/api/v1` and `VITE_SERVER_BASE_URL=http://localhost:8080`.
@@ -138,26 +137,26 @@ taskly-docker/
 
 ### Spring to Play mapping
 
-| Spring Boot                          | Play                                                        |
-| ------------------------------------ | ----------------------------------------------------------- |
-| `@RestController`, `@RequestMapping` | `Controller` classes and `conf/routes`                      |
-| Servlet filter `JwtAuthenticationFilter` | `@Authenticated` action composition                     |
-| `GlobalExceptionHandler`             | `ApiActionCreator` and `ApiErrorHandler`                    |
-| `RequestLoggingFilter`               | `RequestLoggingFilter` (Play `Filter`)                      |
-| Spring Security CORS                 | `play.filters.cors.CORSFilter`                              |
-| Spring Data JPA                      | Play JDBC with prepared statements                          |
-| `@ConfigurationProperties`           | `TasklyConfig` over Typesafe Config                         |
-| `@Bean` wiring                       | Guice `AppModule`                                           |
-| `SeedRunner` with `ApplicationRunner`| `SeedMain` entry point                                      |
-| Actuator health                      | `/actuator/health` controller with a database check         |
+| Spring Boot                              | Play                                                |
+| ---------------------------------------- | --------------------------------------------------- |
+| `@RestController`, `@RequestMapping`     | `Controller` classes and `conf/routes`              |
+| Servlet filter `JwtAuthenticationFilter` | `@Authenticated` action composition                 |
+| `GlobalExceptionHandler`                 | `ApiActionCreator` and `ApiErrorHandler`            |
+| `RequestLoggingFilter`                   | `RequestLoggingFilter` (Play `Filter`)              |
+| Spring Security CORS                     | `play.filters.cors.CORSFilter`                      |
+| Spring Data JPA                          | Play JDBC with prepared statements                  |
+| `@ConfigurationProperties`               | `TasklyConfig` over Typesafe Config                 |
+| `@Bean` wiring                           | Guice `AppModule`                                   |
+| `SeedRunner` with `ApplicationRunner`    | `SeedMain` entry point                              |
+| Actuator health                          | `/actuator/health` controller with a database check |
 
 ## Database
 
 Schema changes live in `src/main/resources/db/migration` as Flyway `V<number>__<name>.sql` files. Flyway applies pending files in order on every startup and records them in `flyway_schema_history`.
 
-| Table   | Notes                                                                                   |
-| ------- | --------------------------------------------------------------------------------------- |
-| `users` | `id` UUID, case-insensitive unique `email` and `username`, `password_hash`, `avatar_file`, timestamps |
+| Table   | Notes                                                                                                                                               |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users` | `id` UUID, case-insensitive unique `email` and `username`, `password_hash`, `avatar_file`, timestamps                                               |
 | `tasks` | `id` UUID, `owner_id` UUID (foreign key to `users`), `due` timestamptz, `status` and `priority` limited by `CHECK`, indexed on `(owner_id, status)` |
 
 - Identifiers are UUIDs. API responses expose them as `_id` and `owner`.
@@ -170,21 +169,21 @@ Schema changes live in `src/main/resources/db/migration` as Flyway `V<number>__<
 
 All routes are under `/api/v1`. Routes other than sign up and sign in require the `taskly_token` cookie.
 
-| Method | Path                | Purpose                                         |
-| ------ | ------------------- | ----------------------------------------------- |
-| POST   | `/auth/signup`      | Register and sign in                            |
-| POST   | `/auth/signin`      | Sign in                                         |
-| GET    | `/auth/signout`     | Sign out                                        |
-| GET    | `/users`            | List users, filter with `username` and `email`  |
-| GET    | `/users/{id}`       | Get a user                                      |
-| PATCH  | `/users/update/{id}`| Update own profile                              |
-| POST   | `/users/upload/{id}`| Upload own avatar (`avatar` field, 2 MB)        |
-| DELETE | `/users/delete/{id}`| Delete own account                              |
-| POST   | `/tasks/create`     | Create a task                                   |
-| GET    | `/tasks/user/{id}`  | List own tasks with `status`, `orderBy`, `page` |
-| GET    | `/tasks/{id}`       | Get a task                                      |
-| PATCH  | `/tasks/{id}`       | Update a task                                   |
-| DELETE | `/tasks/{id}`       | Delete a task                                   |
+| Method | Path                 | Purpose                                         |
+| ------ | -------------------- | ----------------------------------------------- |
+| POST   | `/auth/signup`       | Register and sign in                            |
+| POST   | `/auth/signin`       | Sign in                                         |
+| GET    | `/auth/signout`      | Sign out                                        |
+| GET    | `/users`             | List users, filter with `username` and `email`  |
+| GET    | `/users/{id}`        | Get a user                                      |
+| PATCH  | `/users/update/{id}` | Update own profile                              |
+| POST   | `/users/upload/{id}` | Upload own avatar (`avatar` field, 2 MB)        |
+| DELETE | `/users/delete/{id}` | Delete own account                              |
+| POST   | `/tasks/create`      | Create a task                                   |
+| GET    | `/tasks/user/{id}`   | List own tasks with `status`, `orderBy`, `page` |
+| GET    | `/tasks/{id}`        | Get a task                                      |
+| PATCH  | `/tasks/{id}`        | Update a task                                   |
+| DELETE | `/tasks/{id}`        | Delete a task                                   |
 
 Errors are returned as `{ "status": <code>, "message": "<text>" }`. Unknown routes return `{ "message": "Not found" }` with status 404.
 
@@ -204,27 +203,18 @@ TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres sbt test
 
 ## CI
 
+`.github/workflows/commitlint.yml` lints commit messages on pull requests, configured in `.commitlintrc.json`.
 `.github/workflows/ci.yml` runs these jobs:
 
-1. **Commitlint**: commit message linting on pull requests, configured in `.commitlintrc.json`.
-2. **Build**: compiles the application and the tests, and stages the package with JDK 21.
-3. **Tests**: unit and integration suites against a PostgreSQL 18 service.
-4. **Docker**: builds the image, starts the Compose stack, then checks `/`, signs up a user and runs the seed.
+1. **Build**: compiles the application and the tests, and stages the package with JDK 21.
+2. **Tests**: unit and integration suites against a PostgreSQL 18 service.
+3. **Docker**: builds the image, starts the Compose stack, then checks `/`, signs up a user and runs the seed.
 
 ## Limits
 
 - The API needs a running PostgreSQL.
 - Uploaded avatars are stored on local disk and served from `/images/users`. The Compose stack keeps them in the `taskly-avatars` volume.
 - Events are delivered in-process, so the app runs as a single instance.
-
-## Migrating from the Spring Boot version
-
-- The HTTP contract, the database schema, the JWT format, the cookie name and the bcrypt hashes are unchanged, so existing sessions and data stay valid.
-- Environment variables are the same, except `APP_NAME` is gone, `LOG_FILE` no longer accepts an empty value (use `-Dlogger.resource=logback-console.xml`) and `.env` is loaded by `make` instead of the application.
-- Seeding runs through `bin/taskly-backend -main com.taskly.backend.config.SeedMain` instead of a Spring flag.
-- An existing PostgreSQL database that already holds the tables but no `flyway_schema_history` can be adopted by starting the app once with `FLYWAY_BASELINE_ON_MIGRATE=true` and `FLYWAY_BASELINE_VERSION=2`.
-- The runtime is JDK 21 (an LTS release supported by Play 3.0 and sbt) instead of JDK 25.
-- A request body is parsed as JSON whatever its `Content-Type`. A path that exists with the wrong HTTP method answers 404, as Play does not distinguish it from an unknown path.
 
 ## References
 
